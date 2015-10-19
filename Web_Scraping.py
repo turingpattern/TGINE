@@ -24,17 +24,22 @@ def traer_URL():
 # Función de parseo
 def parseo(pagina):
     soup = BeautifulSoup(pagina.text)
+    #dic_tds=dic()
     valor=soup.find('table',{'title':'Acciones'})
     tbody=valor.find('tbody')
     trs = tbody.findAll('tr')
     print('\n')
     texto=''
     for cada_tr in trs:
+        ###array_tds=[]
         tds = cada_tr.findAll('td')
         for cada_td in tds:
             texto=texto + cada_td.text + '\t'
             texto=texto + '\n'
-    return texto
+            ###array_tds.add(cada_td)
+        #dic_tds.add(tds[2],array_tds)
+    return texto#,dic_tds
+    #dic['ABG'][5]
 
 # Función de escritura a fichero
 def escribe_fichero(contenido):
