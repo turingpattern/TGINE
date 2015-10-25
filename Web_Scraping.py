@@ -1,91 +1,105 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Oct 17 13:25:42 2015
+@author: Adolfo Sanz Anchelergues
+
+TGINE: Web Scraping de página de valores bursátiles
+"""
 # IMPORTACIONES
-# Paquete para importar contenido
-import requests
-# Paquete para el parseo de información
-from bs4 import BeautifulSoup
-# Paquete para introducir retardo
-import time
+import requests # Paquete para importar contenido
+from bs4 import BeautifulSoup # Paquete para el parseo de información
+import time # Paquete para introducir retardo
+import pandas as pd # Biblioteca para la manipulación y análisis de datos
 
 # DEFINICIÓN DE VARIABLES
 # URL origen de información
 URL="http://www.invertia.com/mercados/bolsa/indices/ibex-35/acciones-ib011ibex35"
-# Intervalo de sondeo (en segundos)
-retardo = 0.5
 # Opciones del menú
 items = ["ESCRITURA POR PANTALLA","ESCRITURA A ARCHIVO","MONITORIZAR VALOR"]
 
 # FUNCIONES
 # Función de lectura de importación de los datos
-def traer_URL():
-    global pagina 
+def traer_URL():    
     pagina = requests.get(URL)
     return pagina
 
 # Función de parseo
 def parseo(pagina):
     soup = BeautifulSoup(pagina.text)
-    #dic_tds=dic()
     valor=soup.find('table',{'title':'Acciones'})
-    tbody=valor.find('tbody')
-    trs = tbody.findAll('tr')
-    print('\n')
-    texto=''
-    for cada_tr in trs:
-        ###array_tds=[]
-        tds = cada_tr.findAll('td')
-        for cada_td in tds:
-            texto=texto + cada_td.text + '\t'
-            texto=texto + '\n'
-            ###array_tds.add(cada_td)
-        #dic_tds.add(tds[2],array_tds)
-    return texto#,dic_tds
-    #dic['ABG'][5]
+    trs = valor.findAll('tr')
+    ibex=[]    
+    for cada_tr in range(len(trs)):
+        Fila=[]
+        if cada_tr==0: #La fila de cabecera tiene los títulos de cada columna
+            ths=trs[cada_tr].findAll('th')
+            for cada_th in range(len(ths)):
+                if cada_th != 4: #El quinto valor está vacío
+                    th_corr = ths[cada_th].text.replace("\n","")
+                    Fila.append(th_corr)
+        else:
+            tds = trs[cada_tr].findAll('td')
+            for cada_td in range(len(tds)):
+                if cada_td != 4:
+                    Fila.append(tds[cada_td].text)
+        ibex.append(Fila)
+    texto=pd.DataFrame(ibex[1:], index=None, columns=ibex[0])
+    
+    return texto
 
 # Función de escritura a fichero
 def escribe_fichero(contenido):
-    with open("valores.txt", "w") as fvalores:
-        fvalores.write(contenido)
+    nombre_fichero=input("Introduzca el nombre del fichero: ")
+    nombre_fichero = nombre_fichero + ".csv" # Convertimos a csv
+    contenido.to_csv(nombre_fichero)
+    print("Fichero "+nombre_fichero+" guardado"+"\n")
 
-# Función de selección de valor
+# Función de obtención de datos de un valor
+def parseo_valor(codigo):
+    texto=parseo(traer_URL())
+    for sigla in range(len(texto)):
+        if texto.ix[sigla]["TKR*"] == codigo:
+            print(texto.ix[sigla:sigla])
+            return True
+        
+    print("No existe el valor "+codigo)
+    return False
 
 # main
-print("--Web scrapting de valores bursátiles--")
-print("\n")
-print("Seleccione el modo de operación")
-print("\n")
+print("--Web scrapting de valores bursátiles--\n")
+print("Seleccione el modo de operación:\n")
 
+# Bucle de elección de opciones del menú
 running = True
 while running: 
     opcion = 1 
-    for eleccion in items: 
+    for eleccion in items: # Bucle para crear el menú
         print(str(opcion) + ". " + eleccion) 
         opcion = opcion + 1 
     print(str(opcion) + ". SALIR") 
+ 
     eleccion = int(input("Seleccione una opción: "))
     if eleccion == opcion: 
         running = False 
     else:
-        if eleccion == 1:
-            traer_URL()
-            print(parseo(pagina))
+        if eleccion == 1: # Escritura por pantalla
+            datos=parseo(traer_URL())
+            print(datos)
         
-        elif eleccion == 2:
-            traer_URL()
-            cont=parseo(pagina)
-            escribe_fichero(cont)
-            
-        elif eleccion == 3:
-            valor_estudiar = input("Seleccione un valor: ")            
-            print("Monitorizando valor: "+valor_estudiar)
-            while 1:            
-                try:
+        elif eleccion == 2: # Escritura a fichero csv
+            datos=parseo(traer_URL())
+            escribe_fichero(datos)
+
+        elif eleccion == 3: # Monitorización de valor bursátil
+            valor_estudiar = input("Escriba la sigla de un valor bursátil: ")
+            retardo = int(input("Introduzca intervalo de sondeo (en segundos): "))
+            print("Pulse CTRL+C para interrumpir")            
+            try:            
+                while parseo_valor(valor_estudiar):            
                     time.sleep(retardo)
-                    traer_URL()
-                    cont=parseo(pagina)
-                except KeyboardInterrupt:
-                    break
-                        
+            except KeyboardInterrupt:
+                pass
         elif eleccion == 4:
-            break
+            pass
         else:
             print("Opción incorrecta. Seleccione de nuevo")
