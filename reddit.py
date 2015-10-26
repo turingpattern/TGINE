@@ -1,4 +1,5 @@
 import praw
+import os
 
 my_user_agent="TGINE:v1.0 by /u /pailroco"
 my_sub_reddit="science"
@@ -13,3 +14,6 @@ for submission in subreddit.get_hot(limit = limite):
     print("Text: "+submission.selftext)
     print("Score: "+"%d" % submission.score)
     print("---------------------------------\n")
+
+fichero = os.open('nombrefich.txt','a')
+fichero.write(contenido)
